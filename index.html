@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piltong Note - Pro</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f7;
+            --sidebar-color: #ffffff;
+            --accent-color: #4a90e2;
+            --border-color: #d1d1d1;
+            --text-main: #333;
+            --note-bg: #ffffff; 
+            --note-text: #000000;
+            --note-line: #e8e8e8;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .header-btns button {
+            background-color: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-highlight {
+            background: linear-gradient(135deg, #f39c12, #e67e22) !important;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(243, 156, 18, 0.5);
+        }
+        .btn-highlight:hover { transform: scale(1.05); }
+
+        .btn-print { background-color: #7f8c8d !important; }
+        .btn-focus { background-color: #27ae60 !important; font-weight: bold; }
+
+        .toolbar {
+            background-color: var(--sidebar-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .meta-info { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .meta-info input, .meta-info select { padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; }
+        .title-input { flex-grow: 1; font-weight: bold; min-width: 150px; }
+
+        .mode-tools { display: flex; gap: 10px; align-items: center; border-top: 1px solid #eee; padding-top: 10px; flex-wrap: wrap; }
+        .btn-group { display: flex; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden; }
+        .btn-group button { background: white; border: none; padding: 8px 12px; cursor: pointer; border-right: 1px solid #ddd; }
+        .btn-group button.active { background: var(--accent-color); color: white; }
+        
+        .dynamic-controls button {
+            background: white; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-right: 2px;
+        }
+        
+        #draw-tools button.active-tool { background: #d0e4fb; border-color: var(--accent-color); font-weight: bold; }
+
+        main { 
+            flex-grow: 1; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: #e5e5e5; 
+            overflow: hidden; 
+        }
+        
+        .page-container {
+            width: 100%; 
+            max-width: 1000px; 
+            height: 100%; 
+            background-color: var(--note-bg);
+            padding: 40px; 
+            box-sizing: border-box;
+            position: relative; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            transition: padding 0.3s, margin 0.3s;
+        }
+
+        .editor-wrapper {
+            position: relative;
+            width: 100%;
+            flex-grow: 1;
+            overflow-y: auto; 
+            display: block;
+        }
+
+        #text-editor {
+            width: 100%; 
+            min-height: 100%; 
+            height: max-content; 
+            border: none; 
+            outline: none;
+            font-size: 16px; 
+            line-height: 32px; 
+            color: var(--note-text);
+            background: repeating-linear-gradient(transparent, transparent 31px, var(--note-line) 31px, var(--note-line) 32px);
+            background-attachment: local; 
+            background-color: transparent;
+            overflow: visible; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+        }
+
+        #text-editor img { border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; max-width: 100%; height: auto; }
+        
+        .img-inline { display: inline-block; margin: 5px; vertical-align: top; }
+        .img-float-left { float: left; margin: 10px 20px 10px 0; }
+        .img-float-right { float: right; margin: 10px 0 10px 20px; }
+        .img-center { display: block; margin: 20px auto; clear: both; }
+
+        #canvas-editor { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 5; 
+            display: block; 
+            pointer-events: none; 
+        }
+
+        #resize-overlay { position: absolute; outline: 2px solid var(--accent-color); z-index: 10; pointer-events: none; display: none; }
+        .resize-handle { width: 12px; height: 12px; background: white; border: 2px solid var(--accent-color); position: absolute; border-radius: 50%; pointer-events: auto; }
+        .resize-handle.nw { top: -7px; left: -7px; cursor: nw-resize; }
+        .resize-handle.ne { top: -7px; right: -7px; cursor: ne-resize; }
+        .resize-handle.sw { bottom: -7px; left: -7px; cursor: sw-resize; }
+        .resize-handle.se { bottom: -7px; right: -7px; cursor: se-resize; }
+
+        .signature {
+            position: fixed;
+            bottom: 15px;
+            right: 25px;
+            text-align: right;
+            font-size: 12px;
+            color: #888;
+            line-height: 1.5;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 350px; max-width: 90%; }
+        
+        /* 목록창 스크롤 및 디자인 최적화 */
+        .list-modal-content { width: 500px; max-height: 80vh; display: flex; flex-direction: column; }
+        .list-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px; }
+        
+        .list-container { 
+            overflow-y: auto; 
+            flex-grow: 1; 
+            max-height: 60vh; 
+            padding-right: 5px; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        .list-container::-webkit-scrollbar { width: 8px; }
+        .list-container::-webkit-scrollbar-track { background: #f4f4f7; border-radius: 4px; }
+        .list-container::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 4px; }
+        .list-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+        .list-item:hover { background: #f4f8ff; }
+        .list-item-info { display: flex; flex-direction: column; }
+        .list-item-title { font-weight: bold; color: var(--accent-color); font-size: 15px; margin-bottom: 4px; }
+        .list-item-meta { font-size: 12px; color: #777; }
+        .btn-delete-note { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-delete-note:hover { background: #c0392b; }
+
+        .hidden { display: none !important; }
+
+        body.focus-mode header,
+        body.focus-mode .toolbar { display: none !important; }
+        body.focus-mode main { padding: 0 !important; background: var(--note-bg); }
+        body.focus-mode .page-container { padding: 15px 15px !important; margin: 0 !important; box-shadow: none !important; max-width: none !important; }
+        
+        .btn-exit-focus {
+            position: fixed; bottom: 20px; left: 20px; z-index: 1001;
+            background: rgba(44, 62, 80, 0.9); color: white; border: none; padding: 12px 20px; 
+            border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; 
+            font-weight: bold; display: none; transition: transform 0.2s;
+        }
+        .btn-exit-focus:hover { transform: scale(1.05); }
+        body.focus-mode .btn-exit-focus { display: block; }
+        body.focus-mode .signature { display: none; }
+
+        /* 플로팅 툴바 */
+        #floating-toolbar {
+            position: fixed;
+            z-index: 9999;
+            background-color: #2c3e50;
+            border-radius: 8px;
+            padding: 5px;
+            display: flex;
+            gap: 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(-50%);
+            transition: opacity 0.2s ease, top 0.2s ease;
+        }
+        #floating-toolbar button {
+            background: transparent;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #floating-toolbar button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        @media (max-width: 768px) {
+            main { padding: 0; }
+            .page-container { padding: 15px 10px; margin-bottom: 0; box-shadow: none; border-top: 1px solid #ddd; }
+            .header-btns { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+            .header-btns button { margin-left: 0; padding: 6px 10px; font-size: 12px; }
+        }
+
+        @media print {
+            body, html { height: auto !important; overflow: visible !important; display: block !important; background: white !important; }
+            header, .toolbar, .signature, .modal-overlay, #resize-overlay, .btn-exit-focus, #floating-toolbar { display: none !important; }
+            main { display: block !important; height: auto !important; overflow: visible !important; padding: 0 !important; background: white !important; }
+            .page-container { box-shadow: none !important; margin: 0 !important; padding: 20px !important; width: 100% !important; max-width: none !important; height: auto !important; }
+            .editor-wrapper, #text-editor { overflow: visible !important; height: auto !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Piltong Note</div>
+        <div class="header-btns">
+            <input type="file" id="file-loader" class="hidden" accept=".json" onchange="loadFromJson(this)">
+            <input type="file" id="image-loader" class="hidden" accept="image/*" onchange="insertImage(this)">
+            
+            <button onclick="toggleFocusMode()" class="btn-focus">🔍 넓게보기</button>
+            <button onclick="startNewNote()">새글</button>
+            <button onclick="document.getElementById('file-loader').click()">불러오기</button>
+            <button onclick="openSaveModal()" style="background-color: var(--accent-color);">저장</button>
+            <button onclick="openNoteListModal()" class="btn-highlight">📝 목록</button>
+            <button onclick="printNote()" class="btn-print">🖨️</button>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        <div class="meta-info">
+            <input type="date" id="doc-date">
+            <input type="text" id="doc-location" placeholder="장소">
+            <input type="text" id="doc-title" class="title-input" placeholder="제목을 입력하세요">
+            <select id="folder-select"><option>기본 폴더</option></select>
+            <button onclick="addNewFolder()">+ 새 폴더</button>
+        </div>
+        <div class="mode-tools">
+            <div class="btn-group">
+                <button id="btn-kb" class="active" onclick="setMode('keyboard')">⌨️ 키보드</button>
+                <button id="btn-draw" onclick="setMode('draw')">🎨 그리기</button>
+            </div>
+            <div id="text-tools" class="dynamic-controls">
+                <button onmousedown="formatText(event, 'bold')" ontouchstart="formatText(event, 'bold')"><b>B</b></button>
+                <button onmousedown="formatText(event, 'italic')" ontouchstart="formatText(event, 'italic')"><i>I</i></button>
+                <button onmousedown="formatText(event, 'underline')" ontouchstart="formatText(event, 'underline')"><u>U</u></button>
+                <span style="color: #ccc; margin: 0 10px;">|</span>
+                <button onclick="document.getElementById('image-loader').click()">🖼️ 사진 추가</button>
+            </div>
+            <div id="image-tools" class="dynamic-controls hidden">
+                <span style="font-size: 14px;">배치:</span>
+                <button onclick="changeImageAlignment('inline')" title="나란히">🔲</button>
+                <button onclick="changeImageAlignment('left')">👈</button>
+                <button onclick="changeImageAlignment('center')">⬛</button>
+                <button onclick="changeImageAlignment('right')">👉</button>
+                <button onclick="removeSelectedImage()" style="color: #e74c3c; margin-left:10px;">🗑️ 삭제</button>
+            </div>
+            <div id="draw-tools" class="hidden dynamic-controls">
+                <button id="tool-pen" class="active-tool" onclick="setDrawTool('pen')">🖌️ 펜</button>
+                <button id="tool-eraser" onclick="setDrawTool('eraser')">🧹 지우개</button>
+                <input type="color" id="pen-color" value="#000000" title="펜 색상">
+                <span style="font-size: 14px; margin-left: 5px;">굵기:</span>
+                <input type="range" id="pen-size" min="1" max="50" value="3">
+                <button onclick="clearCanvas()" style="margin-left: 10px; color: #e74c3c;">전체 지우기</button>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <div class="page-container" id="printable-page">
+            <div class="editor-wrapper" id="editor-wrapper">
+                <div id="text-editor" contenteditable="true" spellcheck="false"></div>
+                <canvas id="canvas-editor"></canvas>
+                <div id="resize-overlay">
+                    <div class="resize-handle nw" data-handle="nw"></div>
+                    <div class="resize-handle ne" data-handle="ne"></div>
+                    <div class="resize-handle sw" data-handle="sw"></div>
+                    <div class="resize-handle se" data-handle="se"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="floating-toolbar" class="hidden">
+        <button onmousedown="formatText(event, 'bold')" ontouchstart="formatText(event, 'bold')" title="굵게"><b>B</b></button>
+        <button onmousedown="formatText(event, 'italic')" ontouchstart="formatText(event, 'italic')" title="기울임"><i>I</i></button>
+        <button onmousedown="formatText(event, 'underline')" ontouchstart="formatText(event, 'underline')" title="밑줄"><u>U</u></button>
+    </div>
+
+    <button class="btn-exit-focus" onclick="toggleFocusMode()">🔙 메뉴 다시보기</button>
+
+    <div class="signature">
+        made by piltong pastor<br>
+        (tempusan@hanmail.net)
+    </div>
+
+    <div id="folder-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 320px;">
+            <h3 style="margin-top: 0; color: var(--text-main);">새 폴더 추가</h3>
+            <input type="text" id="new-folder-input" placeholder="폴더 이름을 입력하세요" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+            <button onclick="confirmAddFolder()" style="width:100%; padding:10px; margin-bottom:5px; background:var(--accent-color); color:white; border:none; border-radius:4px; cursor:pointer;">추가하기</button>
+            <button onclick="closeFolderModal()" style="width:100%; padding:8px; border: 1px solid #ccc; background: white; border-radius:4px; cursor:pointer;">취소</button>
+        </div>
+    </div>
+
+    <div id="save-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>노트 저장</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">※ 저장을 누를 때마다 이전 파일에 덮어쓰지 않고 새로운 버전으로 기록됩니다.</p>
+            <button onclick="saveFile('json')" style="width:100%; padding:10px; margin-bottom:5px; background:var(--accent-color); color:white; border:none; border-radius:4px; cursor:pointer;">통합 저장 (내용/그림/사진 모두)</button>
+            <button onclick="saveFile('txt')" style="width:100%; padding:10px; margin-bottom:15px; background:#eee; border:none; border-radius:4px; cursor:pointer;">TXT로 저장 (글자만)</button>
+            <hr style="border: 0; border-top: 1px solid #ddd; margin-bottom: 15px;">
+            <button onclick="closeSaveModal()" style="width:100%; padding:8px; border: 1px solid #ccc; background: white; border-radius:4px; cursor:pointer;">닫기</button>
+        </div>
+    </div>
+
+    <div id="list-modal" class="modal-overlay">
+        <div class="modal-content list-modal-content">
+            <div class="list-header">
+                <h3 style="margin: 0;">저장된 노트 목록</h3>
+                <button onclick="closeNoteListModal()" style="border:1px solid #ccc; background:white; padding:5px 15px; border-radius:4px; cursor:pointer;">닫기</button>
+            </div>
+            <div id="note-list-container" class="list-container"></div>
+        </div>
+    </div>
+
+    <script>
+        let folders = ["기본 폴더"];
+        let selectedImage = null;
+        let isResizing = false;
+        let resizeData = { startX: 0, startWidth: 0, startHeight: 0, aspectRatio: 0, currentHandle: null };
+        let currentDrawTool = 'pen'; 
+        let lastImageWidth = 300; 
+        let currentNoteId = null;
+        
+        let cachedCanvasData = ""; 
+
+        const canvas = document.getElementById('canvas-editor');
+        const ctx = canvas.getContext('2d');
+        const textEditor = document.getElementById('text-editor');
+        const editorWrapper = document.getElementById('editor-wrapper');
+        const folderSelect = document.getElementById('folder-select');
+        const resizeOverlay = document.getElementById('resize-overlay');
+        const floatingToolbar = document.getElementById('floating-toolbar');
+
+        window.onload = () => {
+            // 버튼 새로고침 방지 방어 코드
+            document.querySelectorAll('button').forEach(btn => btn.setAttribute('type', 'button'));
+
+            document.getElementById('doc-date').valueAsDate = new Date();
+            
+            const savedFolders = localStorage.getItem('piltong_folders');
+            if (savedFolders) folders = JSON.parse(savedFolders);
+            updateFolderDropdown();
+
+            const lastActiveNoteId = localStorage.getItem('piltong_last_active_note');
+            if (lastActiveNoteId) {
+                loadNoteFromLocal(Number(lastActiveNoteId));
+            } else {
+                const lastFolder = localStorage.getItem('piltong_last_folder');
+                if (lastFolder && folders.includes(lastFolder)) folderSelect.value = lastFolder;
+            }
+        };
+
+        folderSelect.addEventListener('change', (e) => {
+            localStorage.setItem('piltong_last_folder', e.target.value);
+            triggerAutoSave();
+        });
+
+        function toggleFocusMode() {
+            document.body.classList.toggle('focus-mode');
+            setTimeout(() => {
+                canvas.width = textEditor.offsetWidth;
+                canvas.height = Math.max(editorWrapper.clientHeight, textEditor.scrollHeight);
+                if (cachedCanvasData) loadCanvasData(cachedCanvasData);
+                updateOverlayPosition();
+            }, 300);
+        }
+
+        // 화면 늘어남 그림 초기화 방지 코드
+        const resizeObserver = new ResizeObserver(() => {
+            if(textEditor.offsetWidth === 0) return; 
+            
+            if(canvas.width !== textEditor.offsetWidth || canvas.height !== textEditor.scrollHeight) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+                canvas.width = textEditor.offsetWidth;
+                canvas.height = Math.max(editorWrapper.clientHeight, textEditor.scrollHeight);
+                
+                ctx.drawImage(tempCanvas, 0, 0);
+                cachedCanvasData = canvas.toDataURL(); 
+            }
+        });
+        resizeObserver.observe(textEditor);
+
+        function loadCanvasData(dataUrl) {
+            if (!dataUrl || dataUrl === "data:,") {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                cachedCanvasData = "";
+                return;
+            }
+            const img = new Image(); 
+            img.onload = () => { 
+                ctx.clearRect(0,0,canvas.width, canvas.height); 
+                ctx.drawImage(img, 0, 0); 
+                cachedCanvasData = dataUrl;
+            };
+            img.src = dataUrl; 
+        }
+
+        function printNote() {
+            deselectImage(); 
+            window.print();
+        }
+
+        function addNewFolder() { 
+            document.getElementById('new-folder-input').value = '';
+            document.getElementById('folder-modal').style.display = 'flex'; 
+            setTimeout(() => document.getElementById('new-folder-input').focus(), 100);
+        }
+        function closeFolderModal() { 
+            document.getElementById('folder-modal').style.display = 'none'; 
+        }
+        function confirmAddFolder() {
+            const inputVal = document.getElementById('new-folder-input').value;
+            if (inputVal && inputVal.trim()) { 
+                const trimmed = inputVal.trim();
+                if (!folders.includes(trimmed)) { 
+                    folders.push(trimmed); 
+                    localStorage.setItem('piltong_folders', JSON.stringify(folders));
+                    updateFolderDropdown(); 
+                } 
+                folderSelect.value = trimmed; 
+                localStorage.setItem('piltong_last_folder', trimmed);
+                closeFolderModal();
+            } else {
+                alert("폴더 이름을 입력해주세요.");
+            }
+        }
+        
+        function updateFolderDropdown() { 
+            folderSelect.innerHTML = ""; 
+            folders.forEach(f => { 
+                const opt = document.createElement('option'); 
+                opt.value = f; opt.innerText = f; 
+                folderSelect.appendChild(opt); 
+            }); 
+        }
+
+        // 새글 버튼 꼬임 방지 코드
+        function startNewNote() {
+            if (confirm("현재 작성 중인 내용을 닫고 백지상태로 새 글을 쓰시겠습니까?")) {
+                currentNoteId = Date.now();
+                localStorage.setItem('piltong_last_active_note', currentNoteId); 
+                
+                document.getElementById('doc-title').value = "";
+                document.getElementById('doc-date').valueAsDate = new Date();
+                document.getElementById('doc-location').value = "";
+                textEditor.innerHTML = "";
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                cachedCanvasData = ""; 
+                
+                deselectImage();
+                setMode('keyboard');
+                lastImageWidth = 300; 
+                floatingToolbar.classList.add('hidden');
+                
+                triggerAutoSave(); 
+            }
+        }
+
+        // 이미지 자동 압축 및 삽입 로직
+        function insertImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_WIDTH = 800;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                    textEditor.focus();
+                    document.execCommand('insertHTML', false, `<img src="${compressedDataUrl}" class="img-inline" style="width: ${lastImageWidth}px; max-width: 100%;" alt="사진"> `);
+                    input.value = ""; 
+                    triggerAutoSave();
+                };
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        textEditor.addEventListener('paste', e => {
+            const items = (e.clipboardData || window.clipboardData).items;
+            let hasImage = false;
+
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    hasImage = true;
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const MAX_WIDTH = 800;
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                            textEditor.focus();
+                            document.execCommand('insertHTML', false, `<img src="${compressedDataUrl}" class="img-inline" style="width: ${lastImageWidth}px; max-width: 100%;" alt="사진"> `);
+                            triggerAutoSave();
+                        };
+                        img.src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            if (hasImage) {
+                e.preventDefault(); 
+                return;
+            }
+
+            let text = (e.clipboardData || window.clipboardData).getData('text');
+            if (!text) return; 
+            e.preventDefault();
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n');
+            document.execCommand('insertText', false, text);
+            triggerAutoSave();
+        });
+
+        floatingToolbar.addEventListener('mousedown', e => e.preventDefault());
+        floatingToolbar.addEventListener('touchstart', e => e.preventDefault(), {passive: false});
+
+        function formatText(e, cmd) {
+            e.preventDefault(); 
+            document.execCommand(cmd, false, null); 
+            triggerAutoSave();
+        }
+
+        textEditor.addEventListener('keydown', e => {
+            if (e.ctrlKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'b': e.preventDefault(); formatText(e, 'bold'); break;
+                    case 'i': e.preventDefault(); formatText(e, 'italic'); break;
+                    case 'u': e.preventDefault(); formatText(e, 'underline'); break;
+                }
+            }
+        });
+
+        document.addEventListener('selectionchange', () => {
+            const selection = window.getSelection();
+            
+            if (selection.isCollapsed || !selection.rangeCount || !textEditor.contains(selection.anchorNode)) {
+                floatingToolbar.classList.add('hidden');
+                return;
+            }
+
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+
+            let topPosition = rect.top - 50;
+            if (topPosition < 10) topPosition = rect.bottom + 10;
+
+            floatingToolbar.style.top = topPosition + 'px';
+            floatingToolbar.style.left = (rect.left + (rect.width / 2)) + 'px';
+            floatingToolbar.classList.remove('hidden');
+        });
+
+        function removeSelectedImage() { 
+            if(selectedImage && confirm("삭제하시겠습니까?")) { 
+                selectedImage.remove(); 
+                deselectImage(); 
+                triggerAutoSave();
+            } 
+        }
+
+        function updateOverlayPosition() {
+            if (!selectedImage) return;
+            const wrapperRect = editorWrapper.getBoundingClientRect();
+            const imgRect = selectedImage.getBoundingClientRect();
+            resizeOverlay.style.top = (imgRect.top - wrapperRect.top + editorWrapper.scrollTop) + 'px';
+            resizeOverlay.style.left = (imgRect.left - wrapperRect.left + editorWrapper.scrollLeft) + 'px';
+            resizeOverlay.style.width = imgRect.width + 'px';
+            resizeOverlay.style.height = imgRect.height + 'px';
+            resizeOverlay.style.display = 'block';
+        }
+
+        editorWrapper.addEventListener('scroll', () => {
+            updateOverlayPosition();
+            floatingToolbar.classList.add('hidden'); 
+        });
+        window.addEventListener('resize', updateOverlayPosition);
+        
+        textEditor.addEventListener('click', e => {
+            if (e.target.tagName === 'IMG') selectImage(e.target);
+            else if (!isResizing) deselectImage();
+        });
+
+        function selectImage(imgTag) {
+            selectedImage = imgTag;
+            document.getElementById('text-tools').classList.add('hidden');
+            document.getElementById('image-tools').classList.remove('hidden');
+            floatingToolbar.classList.add('hidden');
+            updateOverlayPosition();
+        }
+
+        function deselectImage() {
+            selectedImage = null;
+            resizeOverlay.style.display = 'none';
+            document.getElementById('image-tools').classList.add('hidden');
+            if (document.getElementById('btn-kb').classList.contains('active')) {
+                document.getElementById('text-tools').classList.remove('hidden');
+            }
+        }
+
+        function changeImageAlignment(align) {
+            if (selectedImage) {
+                selectedImage.classList.remove('img-float-left', 'img-float-right', 'img-center', 'img-inline');
+                if (align === 'left') selectedImage.classList.add('img-float-left');
+                else if (align === 'right') selectedImage.classList.add('img-float-right');
+                else if (align === 'center') selectedImage.classList.add('img-center');
+                else selectedImage.classList.add('img-inline');
+                setTimeout(updateOverlayPosition, 10); 
+                triggerAutoSave();
+            }
+        }
+
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('mousedown', startResizing);
+            handle.addEventListener('touchstart', startResizing, {passive: false});
+        });
+
+        function startResizing(e) {
+            if (!selectedImage) return;
+            e.preventDefault(); e.stopPropagation();
+            isResizing = true;
+            resizeData.currentHandle = e.target.getAttribute('data-handle');
+            const touch = e.type === 'touchstart' ? e.touches[0] : e;
+            resizeData.startX = touch.clientX;
+            resizeData.startWidth = selectedImage.offsetWidth;
+            resizeData.startHeight = selectedImage.offsetHeight;
+            resizeData.aspectRatio = resizeData.startWidth / resizeData.startHeight;
+            
+            document.addEventListener('mousemove', handleResizing);
+            document.addEventListener('mouseup', stopResizing);
+            document.addEventListener('touchmove', handleResizing, {passive: false});
+            document.addEventListener('touchend', stopResizing);
+        }
+
+        function handleResizing(e) {
+            if (!isResizing || !selectedImage) return;
+            const touch = e.type === 'touchmove' ? e.touches[0] : e;
+            const dx = touch.clientX - resizeData.startX;
+            let mult = (resizeData.currentHandle === 'nw' || resizeData.currentHandle === 'sw') ? -1 : 1;
+            let nw = Math.max(50, resizeData.startWidth + (dx * mult));
+            
+            const maxWidth = textEditor.offsetWidth - 20;
+            nw = Math.min(nw, maxWidth);
+            
+            selectedImage.style.width = nw + 'px';
+            selectedImage.style.height = (nw / resizeData.aspectRatio) + 'px';
+            lastImageWidth = nw; 
+            updateOverlayPosition();
+        }
+
+        function stopResizing() {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleResizing);
+            document.removeEventListener('mouseup', stopResizing);
+            document.removeEventListener('touchmove', handleResizing);
+            document.removeEventListener('touchend', stopResizing);
+            triggerAutoSave(); 
+        }
+
+        function setMode(mode) {
+            document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+            deselectImage();
+            
+            const isKb = mode === 'keyboard';
+            document.getElementById('btn-kb').classList.toggle('active', isKb);
+            document.getElementById('btn-draw').classList.toggle('active', !isKb);
+            
+            if(isKb) {
+                textEditor.setAttribute('contenteditable', 'true');
+                canvas.style.pointerEvents = 'none'; 
+                document.getElementById('text-tools').classList.remove('hidden');
+                document.getElementById('draw-tools').classList.add('hidden');
+            } else {
+                textEditor.setAttribute('contenteditable', 'false'); 
+                canvas.style.pointerEvents = 'auto'; 
+                document.getElementById('text-tools').classList.add('hidden');
+                document.getElementById('draw-tools').classList.remove('hidden');
+                setDrawTool('pen'); 
+            }
+            triggerAutoSave();
+        }
+
+        function setDrawTool(tool) {
+            currentDrawTool = tool;
+            document.getElementById('tool-pen').classList.toggle('active-tool', tool === 'pen');
+            document.getElementById('tool-eraser').classList.toggle('active-tool', tool === 'eraser');
+        }
+
+        function saveFile(format) {
+            deselectImage();
+            const dv = document.getElementById('doc-date').value;
+            const fv = folderSelect.value;
+            const rawTitle = document.getElementById('doc-title').value || "제목없음";
+            
+            let tv = rawTitle;
+            let blob, fn = "";
+            
+            if (format === 'json') { 
+                let savedNotes = JSON.parse(localStorage.getItem('piltong_notes') || '[]');
+                
+                let baseTitle = rawTitle;
+                const match = rawTitle.match(/^(.*?)(?:\s+\(\d+\))?$/);
+                if (match) baseTitle = match[1];
+                
+                let counter = 1;
+                let newTitle = baseTitle;
+
+                while (savedNotes.some(n => n.title === newTitle)) {
+                    newTitle = `${baseTitle} (${counter})`;
+                    counter++;
+                }
+                tv = newTitle;
+                document.getElementById('doc-title').value = tv;
+
+                currentNoteId = Date.now(); 
+                const saveTime = new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                const data = { 
+                    id: currentNoteId,
+                    saveTime: saveTime,
+                    title: tv, date: dv, location: document.getElementById('doc-location').value, folder: fv, 
+                    htmlContent: textEditor.innerHTML, canvasData: cachedCanvasData, 
+                    mode: document.getElementById('btn-kb').classList.contains('active') ? 'keyboard' : 'draw' 
+                };
+
+                try {
+                    savedNotes.push(data);
+                    localStorage.setItem('piltong_notes', JSON.stringify(savedNotes));
+                    localStorage.setItem('piltong_last_active_note', currentNoteId); 
+                } catch (e) {
+                    console.error("저장소 한도 초과", e);
+                    alert("사진이 너무 많아 브라우저 내부 저장소(목록)에는 기록하지 못했습니다.\n(다운로드 파일은 정상 저장됩니다)");
+                }
+
+                blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"}); 
+                fn = `ptn+${dv}+${fv}+${tv}.json`; 
+                alert(`[저장 완료]\n새로운 버전 '${tv}'(으)로 목록과 다운로드 폴더에 안전하게 저장되었습니다.`);
+
+            } else { 
+                blob = new Blob([textEditor.innerText], {type: "text/plain"}); 
+                fn = `${tv}.txt`; 
+            }
+            
+            const link = document.createElement('a'); 
+            link.href = URL.createObjectURL(blob); 
+            link.download = fn; 
+            link.click();
+            
+            closeSaveModal();
+        }
+
+        function loadFromJson(input) {
+            const file = input.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    
+                    if (d.folder && !folders.includes(d.folder)) { 
+                        folders.push(d.folder); 
+                        localStorage.setItem('piltong_folders', JSON.stringify(folders));
+                        updateFolderDropdown(); 
+                    }
+                    document.getElementById('doc-title').value = d.title || "";
+                    document.getElementById('doc-date').value = d.date || "";
+                    document.getElementById('doc-location').value = d.location || "";
+                    folderSelect.value = d.folder || "기본 폴더";
+                    
+                    currentNoteId = d.id || Date.now(); 
+                    localStorage.setItem('piltong_last_active_note', currentNoteId);
+
+                    if (d.pages && d.pages.length > 0) {
+                        textEditor.innerHTML = d.pages.join("<br><br>");
+                    } else {
+                        textEditor.innerHTML = d.htmlContent || "";
+                    }
+                    
+                    setTimeout(() => {
+                        canvas.height = Math.max(editorWrapper.clientHeight, textEditor.scrollHeight);
+                        if (d.canvasPages && d.canvasPages.length > 0) {
+                            loadCanvasData(d.canvasPages[0]);
+                        } else {
+                            loadCanvasData(d.canvasData || "");
+                        }
+                    }, 100);
+
+                    setMode(d.mode || 'keyboard');
+                    alert("파일을 성공적으로 불러왔습니다.");
+                    triggerAutoSave();
+                } catch(err) {
+                    console.error("파일 로드 에러", err);
+                    alert("지원하지 않는 파일 형식이거나 파일이 손상되었습니다.");
+                }
+            };
+            reader.readAsText(file); input.value = ""; 
+        }
+
+        function openSaveModal() { document.getElementById('save-modal').style.display = 'flex'; }
+        function closeSaveModal() { document.getElementById('save-modal').style.display = 'none'; }
+
+        function openNoteListModal() {
+            renderNoteList();
+            document.getElementById('list-modal').style.display = 'flex';
+        }
+        function closeNoteListModal() {
+            document.getElementById('list-modal').style.display = 'none';
+        }
+
+        function renderNoteList() {
+            const container = document.getElementById('note-list-container');
+            container.innerHTML = '';
+            const savedNotes = JSON.parse(localStorage.getItem('piltong_notes') || '[]');
+
+            if(savedNotes.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">저장된 노트가 없습니다.</p>';
+                return;
+            }
+
+            savedNotes.reverse().forEach(note => {
+                const li = document.createElement('div');
+                li.className = 'list-item';
+                if (note.id === currentNoteId) li.style.background = '#f0f7ff';
+
+                li.onclick = () => loadNoteFromLocal(note.id);
+
+                const info = document.createElement('div');
+                info.className = 'list-item-info';
+                
+                const timeString = note.saveTime ? ` ${note.saveTime}` : '';
+                const autoSaveMark = (note.title === "자동저장된 노트") ? '<span style="color:#e74c3c; font-size:11px;">[임시]</span> ' : '';
+
+                info.innerHTML = `
+                    <div class="list-item-title">${autoSaveMark}${note.title || '제목없음'}</div>
+                    <div class="list-item-meta">[${note.folder || '기본 폴더'}] ${note.date}${timeString}</div>
+                `;
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete-note';
+                delBtn.innerText = '삭제';
+                delBtn.onclick = (e) => {
+                    e.stopPropagation(); 
+                    deleteNoteFromLocal(note.id);
+                };
+
+                li.appendChild(info);
+                li.appendChild(delBtn);
+                container.appendChild(li);
+            });
+        }
+
+        // 유령 노트 불러오기 꼬임 방지
+        function loadNoteFromLocal(id) {
+            const savedNotes = JSON.parse(localStorage.getItem('piltong_notes') || '[]');
+            const note = savedNotes.find(n => n.id === id);
+            
+            if(!note) {
+                localStorage.removeItem('piltong_last_active_note');
+                return;
+            }
+
+            currentNoteId = note.id;
+            localStorage.setItem('piltong_last_active_note', note.id);
+
+            if (note.folder && !folders.includes(note.folder)) { 
+                folders.push(note.folder); 
+                localStorage.setItem('piltong_folders', JSON.stringify(folders));
+                updateFolderDropdown(); 
+            }
+            document.getElementById('doc-title').value = note.title;
+            document.getElementById('doc-date').value = note.date;
+            document.getElementById('doc-location').value = note.location;
+            folderSelect.value = note.folder;
+
+            if (note.pages && note.pages.length > 0) {
+                textEditor.innerHTML = note.pages.join("<br><br>");
+            } else {
+                textEditor.innerHTML = note.htmlContent || "";
+            }
+
+            setTimeout(() => {
+                canvas.height = Math.max(editorWrapper.clientHeight, textEditor.scrollHeight);
+                if (note.canvasPages && note.canvasPages.length > 0) {
+                    loadCanvasData(note.canvasPages[0]);
+                } else {
+                    loadCanvasData(note.canvasData || "");
+                }
+            }, 100);
+
+            setMode(note.mode || 'keyboard');
+            closeNoteListModal();
+        }
+
+        function deleteNoteFromLocal(id) {
+            if(confirm("이 노트를 목록에서 삭제하시겠습니까?\n(내 컴퓨터에 다운로드된 파일은 지워지지 않습니다)")) {
+                let savedNotes = JSON.parse(localStorage.getItem('piltong_notes') || '[]');
+                savedNotes = savedNotes.filter(n => n.id !== id);
+                localStorage.setItem('piltong_notes', JSON.stringify(savedNotes));
+                
+                if (currentNoteId === id) {
+                    currentNoteId = null;
+                    localStorage.removeItem('piltong_last_active_note');
+                }
+                renderNoteList(); 
+            }
+        }
+
+        let autoSaveTimer;
+        function triggerAutoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(autoSaveToLocal, 1500); 
+        }
+
+        // 그림 및 용량 최적화 자동저장
+        function autoSaveToLocal() {
+            const rawTitle = document.getElementById('doc-title').value.trim();
+            const textContent = textEditor.innerHTML.trim();
+            
+            const hasCanvasData = cachedCanvasData && cachedCanvasData !== "data:,";
+            
+            if (!rawTitle && textContent === "" && !hasCanvasData) return;
+
+            const tv = rawTitle || "자동저장된 노트";
+            const dv = document.getElementById('doc-date').value;
+            const fv = folderSelect.value;
+            
+            if (!currentNoteId) {
+                currentNoteId = Date.now();
+            }
+
+            const saveTime = new Date().toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const data = { 
+                id: currentNoteId,
+                saveTime: saveTime,
+                title: tv, date: dv, location: document.getElementById('doc-location').value, folder: fv, 
+                htmlContent: textEditor.innerHTML, 
+                canvasData: cachedCanvasData,
+                mode: document.getElementById('btn-kb').classList.contains('active') ? 'keyboard' : 'draw' 
+            };
+
+            try {
+                let savedNotes = JSON.parse(localStorage.getItem('piltong_notes') || '[]');
+                const existingIndex = savedNotes.findIndex(n => n.id === currentNoteId);
+                
+                if (existingIndex > -1) {
+                    savedNotes[existingIndex] = data; 
+                } else {
+                    savedNotes.push(data); 
+                }
+                localStorage.setItem('piltong_notes', JSON.stringify(savedNotes));
+                localStorage.setItem('piltong_last_active_note', currentNoteId);
+            } catch (e) {
+                console.error("자동저장 용량 초과", e);
+                alert("⚠️ 브라우저 저장소 용량이 꽉 찼습니다!\n사진이 너무 많아 현재 작업 내역이 자동저장되지 못했습니다. 불필요한 이전 노트를 [목록]에서 삭제하거나 'TXT로 저장'을 이용해주세요.");
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') autoSaveToLocal();
+        });
+        window.addEventListener('pagehide', autoSaveToLocal);
+
+        textEditor.addEventListener('input', triggerAutoSave);
+        document.getElementById('doc-title').addEventListener('input', triggerAutoSave);
+        document.getElementById('doc-location').addEventListener('input', triggerAutoSave);
+
+        let drawing = false;
+        
+        function getPointerPos(e) {
+            const r = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - r.left, y: clientY - r.top };
+        }
+
+        function startDrawing(e) {
+            if(!document.getElementById('btn-draw').classList.contains('active')) return;
+            drawing = true;
+            ctx.beginPath();
+            const pos = getPointerPos(e);
+            ctx.moveTo(pos.x, pos.y);
+            if(e.type === 'touchstart') e.preventDefault(); 
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            if(e.type === 'touchmove') e.preventDefault(); 
+            const pos = getPointerPos(e);
+            
+            ctx.lineWidth = document.getElementById('pen-size').value; 
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round'; 
+            
+            if (currentDrawTool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = document.getElementById('pen-color').value; 
+            }
+            
+            ctx.lineTo(pos.x, pos.y); 
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            if(!drawing) return;
+            drawing = false;
+            ctx.closePath();
+            
+            cachedCanvasData = canvas.toDataURL();
+            triggerAutoSave(); 
+        }
+
+        function clearCanvas() { 
+            if(confirm("그린 그림을 모두 지우시겠습니까? (글자는 지워지지 않습니다)")) {
+                ctx.clearRect(0,0,canvas.width, canvas.height); 
+                cachedCanvasData = ""; 
+                triggerAutoSave();
+            }
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing); 
+
+        canvas.addEventListener('touchstart', startDrawing, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+
+    </script>
+</body>
+</html>
